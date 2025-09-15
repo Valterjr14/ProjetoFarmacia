@@ -3,12 +3,6 @@
 #include "farmacia.h"
 
 int main() {
-  ArqFarma = fopen("Farmacos.dat", "a+b");
-  if (ArqFarma == NULL) {
-    printf("Erro ao abrir arquivo.");
-    return 1;
-  }
-
   char Opcao;
   do {
     printf("\n\n> > > Pague Pouco < < < \n\n");
@@ -48,6 +42,5 @@ int main() {
     }
   } while (Opcao != 'S');
 
-  fclose(ArqFarma);
   return 0;
 }

@@ -4,29 +4,29 @@
 #include <string.h>
 #include "farmacia.h"
 
+// A variável global do ponteiro de arquivo foi removida.
+// Apenas a struct global para manipulação e a variável de tamanho permanecem.
 TpFARMA RgFarma;
-FILE *ArqFarma;
 long int Tamanho = sizeof(TpFARMA);
 
 // Função auxiliar para verificar se um fármaco já existe no arquivo
+// Esta função já estava correta, abrindo e fechando o arquivo.
 int FarmacoJaExiste(const char *nomeFarmaco, const char *modeloFarmaco) {
-  FILE *ArqFarma = fopen("Farmacos.dat", "r+b");
-  if (ArqFarma == NULL) {
-    printf("Erro ao abrir arquivo para verificacao.");
+  FILE *arquivo = fopen("Farmacos.dat", "rb"); // Abre para leitura binária
+  if (arquivo == NULL) {
+    // Se o arquivo não existe, o fármaco também não.
     return 0;
   }
 
   struct TpFarma farmacoExistente;
-
-  while (fread(&farmacoExistente, sizeof(struct TpFarma), 1, ArqFarma) == 1) {
+  while (fread(&farmacoExistente, sizeof(struct TpFarma), 1, arquivo) == 1) {
     if (strcmp(farmacoExistente.Nome, nomeFarmaco) == 0 && strcmp(farmacoExistente.Modelo, modeloFarmaco) == 0) {
-      fclose(ArqFarma);
+      fclose(arquivo);
       return 1; // O fármaco já existe
     }
   }
 
-  fclose(ArqFarma);
-
+  fclose(arquivo);
   return 0; // O fármaco não existe
 }
 
@@ -43,28 +43,22 @@ void Incluir() {
       printf("O fármaco '%s %s' já existe no arquivo.\n", RgFarma.Nome, RgFarma.Modelo);
       printf("\nAVISO: Se o fármaco já existe no arquivo e não aparece na listagem, o mesmo deve estar inativo.\n");
       printf("Para isso consulte o medicamento no banco de dados.\n");
-      printf("\nNova inclusao? S/N ");
-      scanf(" %c", &R);
-      R = toupper(R);
-      continue;
+    } else {
+        printf("Preco: ");
+        scanf("%f", &RgFarma.Preco);
+        printf("Estoque: ");
+        scanf("%d", &RgFarma.QEstoque);
+        RgFarma.Ativo = 1; // Definindo como ativo por padrão
+
+        // Abre o arquivo para adicionar no final (append) e o fecha em seguida.
+        FILE *arquivo = fopen("Farmacos.dat", "ab"); // "ab" para append binário
+        if (arquivo == NULL) {
+          printf("Erro ao abrir arquivo para inclusao.");
+          return;
+        }
+        fwrite(&RgFarma, Tamanho, 1, arquivo);
+        fclose(arquivo);
     }
-
-    printf("Preco: ");
-    scanf("%f", &RgFarma.Preco);
-    printf("Estoque: ");
-    scanf("%d", &RgFarma.QEstoque);
-    RgFarma.Ativo = 1; // Definindo como ativo por padrão
-
-    FILE *ArqFarma = fopen("Farmacos.dat", "a+b");
-    if (ArqFarma == NULL) {
-      printf("Erro ao abrir arquivo para inclusao.");
-      return;
-    }
-
-    // Escrever a estrutura do novo fármaco no arquivo
-    fwrite(&RgFarma, Tamanho, 1, ArqFarma);
-
-    fclose(ArqFarma);
 
     printf("\nNova inclusao? S/N ");
     scanf(" %c", &R);
@@ -75,42 +69,46 @@ void Incluir() {
 void Excluir() {
   char farmaco[21];
   char modelo[21];
+  int encontrado = 0;
+
   printf("*** exclusão ***\n\n");
   printf("Qual farmaco deseja excluir? ");
   scanf("%s", farmaco);
   printf("Qual o modelo do farmaco? ");
   scanf("%s", modelo);
 
-  FILE *TempArq = fopen("temp.dat", "wb");
-  if (TempArq == NULL) {
-    printf("Erro ao abrir arquivo temporário.");
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    printf("Erro: Banco de dados 'Farmacos.dat' nao encontrado.\n");
     return;
   }
 
-  FILE *ArqFarma = fopen("Farmacos.dat", "rb");
-  if (ArqFarma == NULL) {
-    printf("Erro ao abrir arquivo para exclusão.");
-    fclose(TempArq);
+  FILE *tempArq = fopen("temp.dat", "wb");
+  if (tempArq == NULL) {
+    printf("Erro ao criar arquivo temporario.\n");
+    fclose(arquivo);
     return;
   }
 
-  while (fread(&RgFarma, sizeof(struct TpFarma), 1, ArqFarma) == 1) {
+  while (fread(&RgFarma, sizeof(struct TpFarma), 1, arquivo) == 1) {
     if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0) {
-      fwrite(&RgFarma, sizeof(struct TpFarma), 1, TempArq);
+      encontrado = 1;
+      // Não faz nada para não copiar o registro para o arquivo temporário.
+    } else {
+      fwrite(&RgFarma, sizeof(struct TpFarma), 1, tempArq);
     }
   }
 
-  fclose(ArqFarma);
-  fclose(TempArq);
+  fclose(arquivo);
+  fclose(tempArq);
 
   remove("Farmacos.dat");
   rename("temp.dat", "Farmacos.dat");
-  fflush(NULL);
 
-  if(strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0){
-    printf("Medicamento excluído com sucesso!\n");
+  if (encontrado) {
+    printf("Medicamento excluido com sucesso!\n");
   } else {
-    printf("Medicamento não encontrado.\n")
+    printf("Medicamento nao encontrado.\n");
   }
 }
 
@@ -126,207 +124,226 @@ void Venda() {
   printf("Qual o modelo do farmaco que deseja vender? ");
   scanf("%s", modelo);
 
-  FILE *TempArq = fopen("temp.dat", "a+b");
-  if (TempArq == NULL) {
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    printf("Erro: Banco de dados 'Farmacos.dat' nao encontrado.\n");
+    return;
+  }
+
+  FILE *tempArq = fopen("temp.dat", "wb"); // "wb" para criar um novo temporário
+  if (tempArq == NULL) {
     printf("Erro ao abrir arquivo temporário.");
+    fclose(arquivo);
     return;
   }
 
-  FILE *ArqFarma = fopen("Farmacos.dat", "r+b");
-  if (ArqFarma == NULL) {
-    printf("Erro ao abrir arquivo para exclusão.");
-    fclose(TempArq);
-    return;
-  }
-
-  while (fread(&RgFarma, sizeof(struct TpFarma), 1, ArqFarma) == 1) {
-    if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0) {
+  while (fread(&RgFarma, sizeof(struct TpFarma), 1, arquivo) == 1) {
+    if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0 && RgFarma.Ativo == 1) {
       encontrado = 1;
 
       printf("Informe a quantidade desejada: ");
       scanf("%d", &quantidadeDesejada);
 
       if (quantidadeDesejada > RgFarma.QEstoque) {
-        printf("Estoque insuficiente!\n");
-        printf("Quantidade disponível: %d\n", RgFarma.QEstoque);
-        fwrite(&RgFarma, sizeof(struct TpFarma), 1, TempArq);
+        printf("Estoque insuficiente! Disponível: %d\n", RgFarma.QEstoque);
       } else {
-          totalVenda = quantidadeDesejada * RgFarma.Preco;
-          printf("Total da venda: R$ %.2f\n", totalVenda);
+        totalVenda = quantidadeDesejada * RgFarma.Preco;
+        printf("Total da venda: R$ %.2f\n", totalVenda);
+        printf("Valor pago: ");
+        scanf("%f", &valorPago);
 
-          printf("Valor pago: ");
-          scanf("%f", &valorPago);
-
-          if (valorPago < totalVenda) {
-            printf("Valor insuficiente para a compra!\n");
-            fwrite(&RgFarma, sizeof(struct TpFarma), 1, TempArq);
-          } else {
-              printf("Venda realizada com sucesso!\n");
-
-              troco = valorPago - totalVenda;
-              printf("Troco: R$ %.2f\n", troco);
-
-              RgFarma.QEstoque -= quantidadeDesejada;
-              printf("Estoque atualizado para: %d\n", RgFarma.QEstoque); // Depuração
-              fwrite(&RgFarma, sizeof(struct TpFarma), 1, TempArq);
-          }
-
+        if (valorPago < totalVenda) {
+          printf("Valor insuficiente para a compra!\n");
+        } else {
+          troco = valorPago - totalVenda;
+          RgFarma.QEstoque -= quantidadeDesejada;
+          printf("Venda realizada com sucesso! Troco: R$ %.2f\n", troco);
+          printf("Estoque atualizado para: %d\n", RgFarma.QEstoque);
+        }
       }
-    } else {  
-        fwrite(&RgFarma, sizeof(struct TpFarma), 1, TempArq);
-      }
-
+    }
+    // Escreve a versão original ou a modificada no arquivo temporário
+    fwrite(&RgFarma, sizeof(struct TpFarma), 1, tempArq);
   }
 
   if (!encontrado) {
-    printf("Medicamento não encontrado.\n");
+    printf("Medicamento nao encontrado ou inativo.\n");
   }
 
-  fclose(ArqFarma);
-  fclose(TempArq);
+  fclose(arquivo);
+  fclose(tempArq);
 
   remove("Farmacos.dat");
   rename("temp.dat", "Farmacos.dat");
-
-  ArqFarma = fopen("Farmacos.dat", "r+b");
-  if (ArqFarma == NULL) {
-    printf("Erro ao reabrir arquivo Farmacos.dat após a venda.\n");
-    return;
-  }
 }
 
-//Melhoria 1
 void Desativar() {
   printf("*** desativar ***\n\n");
   printf("Qual farmaco deseja desativar? ");
-  char Farmaco[21];
-  scanf("%s", Farmaco);
+  char farmaco[21];
+  scanf("%s", farmaco);
   printf("Qual o modelo do farmaco que deseja desativar? ");
-  char Modelo[21];
-  scanf("%s", Modelo);
+  char modelo[21];
+  scanf("%s", modelo);
 
-  FILE *TempArq = fopen("temp.dat", "a+b");
-  if (TempArq == NULL) {
-    printf("Erro ao abrir arquivo temporário.");
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    printf("Erro: Banco de dados 'Farmacos.dat' nao encontrado.\n");
     return;
   }
 
-  fseek(ArqFarma, 0, 0);
-  while (fread(&RgFarma, Tamanho, 1, ArqFarma) == 1) {
-    if (strcmp(RgFarma.Nome, Farmaco) == 0 && strcmp(RgFarma.Modelo, Modelo) == 0) {
-      RgFarma.Ativo = 0; // Marca como inativo
-    }
-    fwrite(&RgFarma, Tamanho, 1, TempArq);
-  }
-
-  fclose(ArqFarma);
-  fclose(TempArq);
-
-  remove("Farmacos.dat");
-  rename("temp.dat", "Farmacos.dat");
-  ArqFarma = fopen("Farmacos.dat", "r+b");
-
-  printf("\nFármaco marcado como inativo com sucesso.\n");
-}
-
-long int TArquivo() {
-  fseek(ArqFarma, 0, 2);
-  long int R = ftell(ArqFarma) / Tamanho;
-  return R;
-}
-
-//Melhoria 2
-void Ativar() {
-  printf("*** reativação ***\n\n");
-  printf("Qual farmaco deseja reativar? ");
-  char Farmaco[21];
-  scanf("%s", Farmaco);
-  printf("Qual o modelo do farmaco que deseja reativar? ");
-  char Modelo[21];
-  scanf("%s", Modelo);
-  printf("Qual é o preço atualizado? ");
-  float Preco;
-  scanf("%f", &Preco);
-  printf("Qual é o novo estoque? ");
-  int Estoque;
-  scanf("%d", &Estoque);
-
-  FILE *TempArq = fopen("temp.dat", "a+b");
-  if (TempArq == NULL) {
+  FILE *tempArq = fopen("temp.dat", "wb");
+  if (tempArq == NULL) {
     printf("Erro ao abrir arquivo temporário.");
+    fclose(arquivo);
     return;
   }
 
   int encontrado = 0;
-
-  fseek(ArqFarma, 0, 0);
-  while (fread(&RgFarma, Tamanho, 1, ArqFarma) == 1) {
-    if (strcmp(RgFarma.Nome, Farmaco) == 0 && strcmp(RgFarma.Modelo, Modelo) == 0) {
-      encontrado = 1; // Marca como encontrado
-      if (RgFarma.Ativo == 0) {
-        RgFarma.Ativo = 1;
-        RgFarma.Preco = Preco;
-        RgFarma.QEstoque = Estoque;
-      } else {
-        printf("Erro: O fármaco '%s' de modelo '%s' já está ativo.\n", Farmaco, Modelo);
-      }
+  while (fread(&RgFarma, Tamanho, 1, arquivo) == 1) {
+    if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0) {
+      encontrado = 1;
+      RgFarma.Ativo = 0; // Marca como inativo
+      printf("\nFármaco '%s %s' marcado como inativo.\n", farmaco, modelo);
     }
-    fwrite(&RgFarma, Tamanho, 1, TempArq);
+    fwrite(&RgFarma, Tamanho, 1, tempArq);
   }
 
-  fclose(ArqFarma);
-  fclose(TempArq);
+  fclose(arquivo);
+  fclose(tempArq);
 
   remove("Farmacos.dat");
   rename("temp.dat", "Farmacos.dat");
-  ArqFarma = fopen("Farmacos.dat", "r+b");
 
   if (!encontrado) {
-    printf("Erro: O fármaco '%s' de modelo '%s' não foi encontrado no arquivo.\n", Farmaco, Modelo);
-  } else {
-    printf("\nFármaco reativado com sucesso.\n");
+    printf("Medicamento nao encontrado.\n");
+  }
+}
+
+void Ativar() {
+  printf("*** reativação ***\n\n");
+  printf("Qual farmaco deseja reativar? ");
+  char farmaco[21];
+  scanf("%s", farmaco);
+  printf("Qual o modelo do farmaco que deseja reativar? ");
+  char modelo[21];
+  scanf("%s", modelo);
+
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    printf("Erro: Banco de dados 'Farmacos.dat' nao encontrado.\n");
+    return;
+  }
+
+  FILE *tempArq = fopen("temp.dat", "wb");
+  if (tempArq == NULL) {
+    printf("Erro ao abrir arquivo temporário.");
+    fclose(arquivo);
+    return;
+  }
+
+  int encontrado = 0;
+  while (fread(&RgFarma, Tamanho, 1, arquivo) == 1) {
+    if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0) {
+      encontrado = 1;
+      if (RgFarma.Ativo == 1) {
+        printf("Erro: O fármaco '%s %s' já está ativo.\n", farmaco, modelo);
+      } else {
+        printf("Qual é o preço atualizado? ");
+        scanf("%f", &RgFarma.Preco);
+        printf("Qual é o novo estoque? ");
+        scanf("%d", &RgFarma.QEstoque);
+        RgFarma.Ativo = 1; // Reativa
+        printf("\nFármaco reativado com sucesso.\n");
+      }
+    }
+    fwrite(&RgFarma, Tamanho, 1, tempArq);
+  }
+
+  fclose(arquivo);
+  fclose(tempArq);
+
+  remove("Farmacos.dat");
+  rename("temp.dat", "Farmacos.dat");
+
+  if (!encontrado) {
+    printf("Erro: O fármaco '%s %s' não foi encontrado no arquivo.\n", farmaco, modelo);
   }
 }
 
 void Consultar() {
   printf("*** consulta ***\n\n");
   printf("Qual farmaco? ");
-  char Farmaco[21];
-  scanf("%s", Farmaco);
+  char farmaco[21];
+  scanf("%s", farmaco);
   printf("Qual o modelo? ");
-  char Modelo[21];
-  scanf("%s", Modelo);
+  char modelo[21];
+  scanf("%s", modelo);
 
-  fseek(ArqFarma, 0, 0);
-  int Achou = 0;
-  while (fread(&RgFarma, Tamanho, 1, ArqFarma) == 1) {
-    if (strcmp(RgFarma.Nome, Farmaco) == 0 && strcmp(RgFarma.Modelo, Modelo) == 0) {
-      Achou = 1;
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    printf("Nenhum farmaco cadastrado.\n");
+    return;
+  }
+
+  int achou = 0;
+  while (fread(&RgFarma, Tamanho, 1, arquivo) == 1) {
+    if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0) {
+      achou = 1;
       if (RgFarma.Ativo == 1) {
+        printf("\n--- DADOS DO FARMACO ---\n");
         printf("Nome: %s\n", RgFarma.Nome);
         printf("Modelo: %s\n", RgFarma.Modelo);
         printf("Preco: R$%.2f\n", RgFarma.Preco);
         printf("Estoque: %d\n", RgFarma.QEstoque);
       } else {
-        printf("O medicamento '%s' de modelo '%s' está inativo.\n", RgFarma.Nome, RgFarma.Modelo);
+        printf("O medicamento '%s %s' está inativo.\n", RgFarma.Nome, RgFarma.Modelo);
       }
+      break; // Para o loop, pois já achamos
     }
   }
-  if (!Achou) {
-    printf("Registro inexistente!");
+  fclose(arquivo);
+
+  if (!achou) {
+    printf("Registro inexistente!\n");
   }
 }
 
 void LTodos() {
   printf("*** lista todos ***\n\n");
-  fseek(ArqFarma, 0, 0);
-  while (fread(&RgFarma, Tamanho, 1, ArqFarma) == 1) {
+
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    printf("Nenhum farmaco cadastrado.\n");
+    return;
+  }
+  
+  int encontrou_algum = 0;
+  while (fread(&RgFarma, Tamanho, 1, arquivo) == 1) {
     if (RgFarma.Ativo == 1) {
+      encontrou_algum = 1;
       printf("Nome: %s\n", RgFarma.Nome);
       printf("Modelo: %s\n", RgFarma.Modelo);
       printf("Preco: R$%.2f\n", RgFarma.Preco);
       printf("Estoque: %d\n", RgFarma.QEstoque);
-      printf("***\n\n");
+      printf("************************\n\n");
     }
   }
+  fclose(arquivo);
+  
+  if (!encontrou_algum) {
+      printf("Nenhum farmaco ativo para listar.\n");
+  }
+}
+
+// Esta função agora abre e fecha o arquivo para fazer o cálculo
+long int TArquivo() {
+  FILE *arquivo = fopen("Farmacos.dat", "rb");
+  if (arquivo == NULL) {
+    return 0; // Se não há arquivo, há 0 registros
+  }
+  fseek(arquivo, 0, SEEK_END); // Vai para o fim do arquivo
+  long int total_bytes = ftell(arquivo);
+  fclose(arquivo);
+  return total_bytes / Tamanho;
 }
