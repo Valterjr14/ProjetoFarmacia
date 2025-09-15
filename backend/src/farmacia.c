@@ -4,13 +4,10 @@
 #include <string.h>
 #include "farmacia.h"
 
-// A variável global do ponteiro de arquivo foi removida.
-// Apenas a struct global para manipulação e a variável de tamanho permanecem.
 TpFARMA RgFarma;
 long int Tamanho = sizeof(TpFARMA);
 
 // Função auxiliar para verificar se um fármaco já existe no arquivo
-// Esta função já estava correta, abrindo e fechando o arquivo.
 int FarmacoJaExiste(const char *nomeFarmaco, const char *modeloFarmaco) {
   FILE *arquivo = fopen("Farmacos.dat", "rb"); // Abre para leitura binária
   if (arquivo == NULL) {
@@ -93,7 +90,6 @@ void Excluir() {
   while (fread(&RgFarma, sizeof(struct TpFarma), 1, arquivo) == 1) {
     if (strcmp(RgFarma.Nome, farmaco) == 0 && strcmp(RgFarma.Modelo, modelo) == 0) {
       encontrado = 1;
-      // Não faz nada para não copiar o registro para o arquivo temporário.
     } else {
       fwrite(&RgFarma, sizeof(struct TpFarma), 1, tempArq);
     }
@@ -130,8 +126,7 @@ void Venda() {
     return;
   }
 
-  FILE *tempArq = fopen("temp.dat", "wb"); // "wb" para criar um novo temporário
-  if (tempArq == NULL) {
+  FILE *tempArq = fopen("temp.dat", "wb");
     printf("Erro ao abrir arquivo temporário.");
     fclose(arquivo);
     return;
@@ -162,7 +157,6 @@ void Venda() {
         }
       }
     }
-    // Escreve a versão original ou a modificada no arquivo temporário
     fwrite(&RgFarma, sizeof(struct TpFarma), 1, tempArq);
   }
 
@@ -299,7 +293,7 @@ void Consultar() {
       } else {
         printf("O medicamento '%s %s' está inativo.\n", RgFarma.Nome, RgFarma.Modelo);
       }
-      break; // Para o loop, pois já achamos
+      break;
     }
   }
   fclose(arquivo);
@@ -336,13 +330,12 @@ void LTodos() {
   }
 }
 
-// Esta função agora abre e fecha o arquivo para fazer o cálculo
 long int TArquivo() {
   FILE *arquivo = fopen("Farmacos.dat", "rb");
   if (arquivo == NULL) {
-    return 0; // Se não há arquivo, há 0 registros
+    return 0;
   }
-  fseek(arquivo, 0, SEEK_END); // Vai para o fim do arquivo
+  fseek(arquivo, 0, SEEK_END);
   long int total_bytes = ftell(arquivo);
   fclose(arquivo);
   return total_bytes / Tamanho;

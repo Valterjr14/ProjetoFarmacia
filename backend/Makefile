@@ -1,13 +1,15 @@
 CC = gcc
 CFLAGS = -Iinclude -Wall -Wextra -g
-SRC = src/main.c src/farmacia.c
-OBJ = $(SRC:.c=.o)
-BIN = build/farmacia
+
+LIBS = -lpq -lpthread
+
+SRC = src/main.c src/farmacia.c src/civetweb.c
+BIN = build/server
 
 all: $(BIN)
 
-$(BIN): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+$(BIN): $(SRC)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f src/*.o $(BIN)
+	rm -f $(BIN)
