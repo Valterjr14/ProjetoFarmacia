@@ -1,4 +1,4 @@
-# Pague Pouco — Sistema de Gestão de Farmácia
+# Sistema de Gestão de Farmácia
 
 Sistema de controle de estoque, cadastro de medicamentos e registro de vendas desenvolvido com **núcleo de persistência em C** (manipulação direta de arquivos binários `struct` / `.dat`) e **interface web** integrada via Foreign Function Interface (`ctypes`).
 
