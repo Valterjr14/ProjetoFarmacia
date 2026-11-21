@@ -1,15 +1,22 @@
 CC = gcc
 CFLAGS = -Iinclude -Wall -Wextra -g
 
-LIBS = -lpq -lpthread
+BUILD_DIR = build
+CLI_BIN = $(BUILD_DIR)/farmacia_cli
+SHARED_LIB = $(BUILD_DIR)/libfarmacia.so
 
-SRC = src/main.c src/farmacia.c src/civetweb.c
-BIN = build/server
+all: $(CLI_BIN) $(SHARED_LIB)
 
-all: $(BIN)
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
-$(BIN): $(SRC)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+$(CLI_BIN): src/main.c src/farmacia.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(SHARED_LIB): src/farmacia.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ $^
 
 clean:
-	rm -f $(BIN)
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all clean

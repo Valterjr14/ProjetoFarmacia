@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão de Farmácia</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Gestão de Farmácia</h1>
+      <p>Sistema de Controle de Estoque e Vendas</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="toast" class="toast hidden"></div>
+
+    <section class="grid-forms">
+      <!-- Cadastro -->
+      <div class="card">
+        <h2>Cadastrar Fármaco</h2>
+        <form id="form-cadastro">
+          <label>Nome
+            <input type="text" id="cad-nome" placeholder="Ex: Dipirona" required maxlength="48" />
+          </label>
+          <label>Modelo / Apresentação
+            <input type="text" id="cad-modelo" placeholder="Ex: 500mg Comprimido" required maxlength="48" />
+          </label>
+          <div class="row">
+            <label>Preço (R$)
+              <input type="number" id="cad-preco" step="0.01" min="0.01" placeholder="12.50" required />
+            </label>
+            <label>Estoque Inicial
+              <input type="number" id="cad-estoque" min="0" placeholder="30" required />
+            </label>
+          </div>
+          <button type="submit" class="btn primary">Incluir Fármaco</button>
+        </form>
+      </div>
+
+      <!-- Venda -->
+      <div class="card">
+        <h2>Registrar Venda</h2>
+        <form id="form-venda">
+          <label>Fármaco Ativo
+            <select id="venda-select" required>
+              <option value="">Selecione um item...</option>
+            </select>
+          </label>
+          <div class="row">
+            <label>Quantidade
+              <input type="number" id="venda-qtd" min="1" value="1" required />
+            </label>
+            <label>Valor Pago (R$)
+              <input type="number" id="venda-pago" step="0.01" min="0.01" placeholder="20.00" required />
+            </label>
+          </div>
+          <p class="total-preview">Total estimado: <strong id="venda-total">R$ 0,00</strong></p>
+          <button type="submit" class="btn success">Finalizar Venda</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Tabela de Estoque -->
+    <section class="card">
+      <div class="table-header">
+        <h2>Catálogo de Fármacos</h2>
+        <div class="filters">
+          <input type="text" id="busca" placeholder="Filtrar por nome ou modelo..." />
+          <label class="checkbox-label">
+            <input type="checkbox" id="mostrar-inativos" checked />
+            Mostrar inativos
+          </label>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Modelo</th>
+              <th>Preço</th>
+              <th>Estoque</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-corpo">
+            <tr><td colspan="6" class="empty">Carregando registros...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de Reativação -->
+  <div id="modal-reativar" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Reativar Fármaco</h3>
+        <button type="button" class="modal-close" onclick="fecharModal('modal-reativar')">&times;</button>
+      </div>
+      <p id="reativar-subtitulo" class="modal-subtitle"></p>
+      <form id="form-reativar">
+        <input type="hidden" id="reativar-nome" />
+        <input type="hidden" id="reativar-modelo" />
+        <div class="row">
+          <label>Novo Preço (R$)
+            <input type="number" id="reativar-preco" step="0.01" min="0.01" required />
+          </label>
+          <label>Novo Estoque
+            <input type="number" id="reativar-estoque" min="0" required />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" onclick="fecharModal('modal-reativar')">Cancelar</button>
+          <button type="submit" class="btn success">Confirmar Reativação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmação de Exclusão -->
+  <div id="modal-excluir" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Excluir Fármaco</h3>
+        <button type="button" class="modal-close" onclick="fecharModal('modal-excluir')">&times;</button>
+      </div>
+      <p id="excluir-texto" class="modal-subtitle"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" onclick="fecharModal('modal-excluir')">Cancelar</button>
+        <button type="button" id="btn-confirmar-exclusao" class="btn danger">Excluir Permanentemente</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

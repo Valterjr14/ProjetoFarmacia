@@ -1,0 +1,17 @@
+# Compilados C
+backend/build/
+*.o
+*.so
+*.out
+*.exe
+
+# Banco de dados binário local e temporários
+*.dat
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Editores / Sistema
+.vscode/
+.DS_Store
